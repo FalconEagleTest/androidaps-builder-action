@@ -21,6 +21,14 @@ jobs:
   build:
     runs-on: ubuntu-latest # Android SDK is built-in in this image
     steps:
+      - uses: actions/checkout@v2
+
+      - name: JSON to variables
+        uses: rgarcia-phi/json-to-variables@v1.1.0
+        with:
+          filename: '.github/workflows/androidaps-version.json'
+          prefix: td
+          
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
@@ -28,8 +36,10 @@ jobs:
           java-version: ${{ github.event.inputs.jdkVersion }}
 
       - name: Clone project
-        run: git clone --recurse-submodules --depth=1 ${{ github.event.inputs.repository }} workspace
-
+        run: 
+          git clone --recurse-submodules --depth=1 ${{ github.event.inputs.repository }} workspace
+          git checkout ${{ env.td_commit_hash }}
+          git show --summary
       - name: Build APK
         working-directory: ./workspace
         run: |
@@ -43,3 +53,12 @@ jobs:
           path: ./**/*.apk
           name: apk-archive
           retention-days: 1
+          
+      - name: Release
+        uses: ncipollo/release-action@v1
+        with:
+            tag: Android-${{ env.td_version }}-${{ env.td_commit_hash }}
+            name: Android ${{ env.td_version }}-${{ env.td_commit_hash }}
+            body: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}
+            token: ${{ secrets.GITHUB_TOKEN }}
+            artifacts: ./**/*.apk
