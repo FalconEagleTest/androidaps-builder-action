@@ -53,10 +53,10 @@ jobs:
         uses: ilharp/sign-android-release@v1.0.4
         with:
           releaseDir: ./**/
-          signingKey: ${{ secrets.ANDROID_SIGNING_KEY }}
-          keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          signingKey: ${{ secrets.SIGNINGKEYBASE64 }}
+          keyAlias: ${{ secrets.ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTOREPASSWORD }}
+          keyPassword: ${{ secrets.KEYSTOREPASSWORD }}
           
       - name: Upload the APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
