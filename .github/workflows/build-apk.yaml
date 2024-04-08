@@ -52,7 +52,7 @@ jobs:
         id: sign_app
         uses: ilharp/sign-android-release@v1.0.4
         with:
-          releaseDir: ./**/
+          releaseDir: app/build/outputs/apk/release
           signingKey: ${{ secrets.SIGNINGKEYBASE64 }}
           keyAlias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTOREPASSWORD }}
