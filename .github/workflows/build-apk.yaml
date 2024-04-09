@@ -53,11 +53,13 @@ jobs:
           chmod +x gradlew
           
           ./gradlew assembleFullRelease app
+          ls
+          ls -lad **/*(/)
       - name: Sign APK with keystore
         uses: r0adkll/sign-android-release@v1
         id: sign_app
         with:
-          releaseDirectory: ./**/
+          releaseDirectory: app/build/outputs
           signingKeyBase64: ${{ secrets.SIGNINGKEYBASE64 }}
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTOREPASSWORD }}
