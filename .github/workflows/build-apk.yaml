@@ -32,7 +32,7 @@ jobs:
         id: decode_keystore
         uses: timheuer/base64-to-file@v1
         with:
-          fileName: 'keystore/your_signing_keystore.jks'
+          fileName: '.github/workflows/clientkeystore.jks'
           encodedString: ${{ secrets.SIGNINGKEYBASE64 }}
       - name: Setup JDK
         uses: actions/setup-java@v4
