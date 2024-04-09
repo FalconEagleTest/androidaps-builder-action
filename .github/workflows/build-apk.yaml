@@ -52,7 +52,7 @@ jobs:
           if [ ! -f "gradlew" ]; then gradle wrapper; fi
           chmod +x gradlew
           
-          ./gradlew assembleFullRelease -Pandroid.injected.signing.store.file=.github/workflows/clientkeystore.jks -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+          ./gradlew assembleFullRelease AAPS.app -Pandroid.injected.signing.store.file=.github/workflows/clientkeystore.jks -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
    
       - name: Upload the APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
