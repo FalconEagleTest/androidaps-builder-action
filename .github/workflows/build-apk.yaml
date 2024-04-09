@@ -15,7 +15,7 @@ on:
       taskName:
         description: "build.gradle task name: assemble[Flavor]Release"
         required: false
-        default: "assembleRelease"
+        default: "app:bundleRelease"
 
 jobs:
   build:
@@ -28,7 +28,12 @@ jobs:
         with:
           filename: '.github/workflows/androidaps-version.json'
           prefix: td
-          
+      - name: Decode Keystore
+        id: decode_keystore
+        uses: timheuer/base64-to-file@v1
+        with:
+          fileName: 'keystore/your_signing_keystore.jks'
+          encodedString: ${{ secrets.SIGNINGKEYBASE64 }}
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
@@ -48,15 +53,13 @@ jobs:
           chmod +x gradlew
           ./gradlew ${{ github.event.inputs.taskName }} --stacktrace
       
-      - name: Sign App
-        id: sign_app
-        uses: ilharp/sign-android-release@v1.0.4
-        with:
-          releaseDir: app/build/outputs/apk/release
-          signingKey: ${{ secrets.ANDROID_SIGNING_KEY }}
-          keyAlias: ${{ secrets.ANDROID_KEY_ALIAS }}
-          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD  }}
-          keyPassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD  }}
+        env:
+          SIGNING_KEY_ALIAS: ${{ secrets.ALIAS }}
+          SIGNING_KEY_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
+          SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
+          
+          
+          
           
       - name: Upload the APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
