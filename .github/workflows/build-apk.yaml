@@ -57,14 +57,14 @@ jobs:
           cd app 
           
           cd build 
-          
+          ls
           cd outputs 
           ls
       - name: Sign APK with keystore
         uses: r0adkll/sign-android-release@v1
         id: sign_app
         with:
-          releaseDirectory: app/build/release
+          releaseDirectory: app/build/outputs/release
           signingKeyBase64: ${{ secrets.SIGNINGKEYBASE64 }}
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTOREPASSWORD }}
@@ -74,7 +74,7 @@ jobs:
       - name: Upload the APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
         with:
-          path: app/build/release/*.apk
+          path: app/build/outputs/release/*.apk
           name: apk-archive
           retention-days: 1
           
