@@ -64,8 +64,8 @@ jobs:
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-            tag: Android-${{ env.td_version }}-${{ env.td_commit_hash }}
-            name: Android ${{ env.td_version }}-${{ env.td_commit_hash }}
+            tag: Android-${{ env.td_version }}-1${{ env.td_commit_hash }}
+            name: Android ${{ env.td_version }}-1${{ env.td_commit_hash }}
             body: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}
             token: ${{ secrets.GITHUB_TOKEN }}
             artifacts: ./**/*.apk
