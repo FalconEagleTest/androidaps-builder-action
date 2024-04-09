@@ -15,7 +15,7 @@ on:
       taskName:
         description: "build.gradle task name: assemble[Flavor]Release"
         required: false
-        default: "app:bundleRelease"
+        default: "assembleRelease"
 
 jobs:
   build:
@@ -51,7 +51,7 @@ jobs:
         run: |
           if [ ! -f "gradlew" ]; then gradle wrapper; fi
           chmod +x gradlew
-          ./gradlew ${{ github.event.inputs.taskName }} --stacktrace
+          ./gradlew ${{ github.event.inputs.taskName }}
       
         env:
           SIGNING_KEY_ALIAS: ${{ secrets.ALIAS }}
