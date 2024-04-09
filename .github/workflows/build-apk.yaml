@@ -51,8 +51,8 @@ jobs:
         run: |
           if [ ! -f "gradlew" ]; then gradle wrapper; fi
           chmod +x gradlew
-          
-          ./gradlew assembleFullRelease AAPS.app
+          ./gradlew -q projects
+          ./gradlew assembleFullRelease AAPS:app
       - name: Sign APK with keystore
         uses: r0adkll/sign-android-release@v1
         id: sign_app
