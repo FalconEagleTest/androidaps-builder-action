@@ -55,10 +55,10 @@ jobs:
           ./gradlew assembleFullRelease app
           ls
           cd app 
-          ls
+          
           cd build 
-          ls 
-          cd Release 
+          
+          cd outputs 
           ls
       - name: Sign APK with keystore
         uses: r0adkll/sign-android-release@v1
