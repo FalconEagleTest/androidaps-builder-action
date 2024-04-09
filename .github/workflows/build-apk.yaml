@@ -15,7 +15,7 @@ on:
       taskName:
         description: "build.gradle task name: assemble[Flavor]Release"
         required: false
-        default: "fullRelease"
+        default: "assembleFullRelease"
 
 jobs:
   build:
