@@ -51,10 +51,8 @@ jobs:
           cd workspace
           git checkout ${{ env.td_commit_hash }}
           git show --summary
-      - name: Make gradlew executable
-        run: chmod +x ./gradlew
+      
       - name: Build APK
-        working-directory: ./workspace
         run: ./gradlew assembleFullRelease app --stacktrace    
         env:
             SIGNING_KEY_ALIAS: ${{ secrets.ALIAS }}
