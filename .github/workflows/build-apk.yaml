@@ -51,7 +51,10 @@ jobs:
           cd workspace
           git checkout ${{ env.td_commit_hash }}
           git show --summary
-      
+      - name: Make gradlew executable
+        run: |
+          if [ ! -f "gradlew" ]; then gradle wrapper; fi
+          chmod +x gradlew
       - name: Build APK
         run: ./gradlew assembleFullRelease app --stacktrace    
         env:
