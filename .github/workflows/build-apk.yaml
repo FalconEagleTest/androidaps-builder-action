@@ -28,17 +28,7 @@ jobs:
         with:
           filename: '.github/workflows/androidaps-version.json'
           prefix: td
-      - name: Decode Keystore
-        env:
-          ENCODED_STRING: ${{ secrets.SIGNINGKEYBASE64 }}
-          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
-          RELEASE_KEYSTORE_ALIAS: ${{ secrets.ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
-
-        run: |
-          echo $ENCODED_STRING > keystore-b64.txt
-          base64 -d keystore-b64.txt > keystore.jks
-          ls
+      
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
@@ -57,7 +47,17 @@ jobs:
           if [ ! -f "gradlew" ]; then gradle wrapper; fi
           chmod +x gradlew
           ./gradlew -q projects
-          
+      - name: Decode Keystore
+        env:
+          ENCODED_STRING: ${{ secrets.SIGNINGKEYBASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
+          RELEASE_KEYSTORE_ALIAS: ${{ secrets.ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
+
+        run: |
+          echo $ENCODED_STRING > keystore-b64.txt
+          base64 -d keystore-b64.txt > keystore.jks
+          ls    
       - name: Build APK
         run: ./gradlew assembleFullRelease app:app -Pandroid.injected.signing.store.file=keystore.jks -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
         working-directory: ./workspace
