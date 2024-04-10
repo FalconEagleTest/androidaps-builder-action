@@ -63,11 +63,13 @@ jobs:
             SIGNING_KEY_ALIAS: ${{ secrets.ALIAS }}
             SIGNING_KEY_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
             SIGNING_STORE_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
-      
+      - name: Exe files
+        run: |
+          ls
       - name: Upload the APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
         with:
-          path: app/build/outputs/apk/full/release/*.apk
+          path: ./**/*.apk
           name: apk-archive
           retention-days: 1
           
@@ -78,4 +80,4 @@ jobs:
             name: Android ${{ env.td_version }}-1${{ env.td_commit_hash }}
             body: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}
             token: ${{ secrets.GITHUB_TOKEN }}
-            artifacts: app/build/outputs/apk/full/release/*.apk
+            artifacts: ./**/*.apk
