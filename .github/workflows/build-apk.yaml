@@ -56,8 +56,10 @@ jobs:
         run: |
           if [ ! -f "gradlew" ]; then gradle wrapper; fi
           chmod +x gradlew
+          ./gradlew -q projects
+          
       - name: Build APK
-        run: ./gradlew assembleFullRelease app --stacktrace    
+        run: ./gradlew assembleFullRelease app:app --stacktrace    
         working-directory: ./workspace
         env:
             SIGNING_KEY_ALIAS: ${{ secrets.ALIAS }}
