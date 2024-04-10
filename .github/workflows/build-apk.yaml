@@ -60,7 +60,7 @@ jobs:
           pwd
           ls    
       - name: Build APK
-        run: ./gradlew assembleFullRelease app:app -Pandroid.injected.signing.store.file=workspace/keystore.jks -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+        run: ./gradlew assembleFullRelease app:app -Pandroid.injected.signing.store.file=./workspace/keystore.jks -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
         working-directory: ./workspace
         
       - name: Exe files
