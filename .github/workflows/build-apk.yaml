@@ -58,7 +58,7 @@ jobs:
           
           cd build 
           ls
-          cd apk
+          cd outputs
           ls
       - name: Sign APK with keystore
         uses: r0adkll/sign-android-release@v1
