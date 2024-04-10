@@ -57,7 +57,7 @@ jobs:
           cd app 
           
           cd build 
-          ls
+         
           cd outputs
           ls
           cd apk
@@ -66,7 +66,7 @@ jobs:
         uses: r0adkll/sign-android-release@v1
         id: sign_app
         with:
-          releaseDirectory: app/build/apk
+          releaseDirectory: app/build/outputs/apk
           signingKeyBase64: ${{ secrets.SIGNINGKEYBASE64 }}
           alias: ${{ secrets.ALIAS }}
           keyStorePassword: ${{ secrets.KEYSTOREPASSWORD }}
@@ -76,7 +76,7 @@ jobs:
       - name: Upload the APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
         with:
-          path: app/build/apk/*.apk
+          path: app/build/outputs/apk/*.apk
           name: apk-archive
           retention-days: 1
           
@@ -87,4 +87,4 @@ jobs:
             name: Android ${{ env.td_version }}-1${{ env.td_commit_hash }}
             body: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}
             token: ${{ secrets.GITHUB_TOKEN }}
-            artifacts: app/build/apk/*.apk
+            artifacts: app/build/outputs/apk/*.apk
