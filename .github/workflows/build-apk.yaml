@@ -57,6 +57,7 @@ jobs:
           chmod +x gradlew
       - name: Build APK
         run: ./gradlew assembleFullRelease app --stacktrace    
+        working-directory: ./workspace
         env:
             SIGNING_KEY_ALIAS: ${{ secrets.ALIAS }}
             SIGNING_KEY_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
