@@ -48,6 +48,7 @@ jobs:
           chmod +x gradlew
           ./gradlew -q projects
       - name: Decode Keystore
+        working-directory: ./workspace
         env:
           ENCODED_STRING: ${{ secrets.SIGNINGKEYBASE64 }}
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
