@@ -42,16 +42,17 @@ jobs:
           git checkout ${{ env.td_commit_hash }}
           git show --summary
       - name: Make gradlew executable
-        
+        working-directory: ./workspace
         run: |
           if [ ! -f "gradlew" ]; then gradle wrapper; fi
           chmod +x gradlew
           ./gradlew -q projects
       - name: Decode Keystore
         run: echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
-
+        working-directory: ./workspace
       
       - name: Build APK
+        working-directory: ./workspace
         run: ./gradlew assembleFullRelease app:app -Pandroid.injected.signing.store.file=/tmp/keystore.jks -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
         
         
