@@ -54,7 +54,7 @@ jobs:
         working-directory: ./workspace
         run: |
           ./gradlew assembleFullRelease
-          ./gradlew assembleWearFullRelease
+          
 
       - name: Verify APK Files
         working-directory: ./workspace
