@@ -71,11 +71,16 @@ jobs:
           name: apk-archive
           retention-days: 1
 
+      - name: Debug Environment Variables
+        run: |
+          echo "td_version=${{ env.td_version }}"
+          echo "td_commit_hash=${{ env.td_commit_hash }}"
+
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          tag: Android-${{ env.td_version }}-${{ env.td_commit_hash }}
-          name: Android ${{ env.td_version }}-${{ env.td_commit_hash }}
-          body: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}
+          tag: Android-${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
+          name: Android ${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
+          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash || '0000000' }}"
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: ./workspace/app/build/outputs/apk/**/*.apk
