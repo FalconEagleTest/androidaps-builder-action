@@ -59,11 +59,12 @@ jobs:
 
       - name: Build APK
         working-directory: ./workspace
-        run: ./gradlew ${{ github.event.inputs.taskName }} \
-          -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
-          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
-          -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
-          -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+        run: |
+          ./gradlew ${{ github.event.inputs.taskName }} \
+            -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
 
       - name: Verify APK Files
         working-directory: ./workspace
