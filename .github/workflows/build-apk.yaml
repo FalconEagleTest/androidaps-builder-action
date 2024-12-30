@@ -9,9 +9,13 @@ on:
         required: true
         default: "https://github.com/nightscout/AndroidAPS"
       jdkVersion:
-        description: "OpenJDK version to use: 21"
+        description: "OpenJDK version to use: 8 / 11 / 17 / 21 etc."
         required: false
         default: "21"
+      flavor:
+        description: "Choose the flavor to build"
+        required: true
+        default: "full"
       taskName:
         description: "build.gradle task name: assemble[Flavor]Release"
         required: false
@@ -19,9 +23,15 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # Android SDK is built-in in this image
     steps:
       - uses: actions/checkout@v2
+
+      - name: JSON to variables
+        uses: rgarcia-phi/json-to-variables@v1.1.0
+        with:
+          filename: '.github/workflows/androidaps-version.json'
+          prefix: td
 
       - name: Setup JDK
         uses: actions/setup-java@v4
@@ -36,51 +46,42 @@ jobs:
           git checkout ${{ env.td_commit_hash }}
           git show --summary
 
-      - name: List Gradle Tasks
+      - name: Make gradlew executable
         working-directory: ./workspace
-        run: ./gradlew tasks --all
+        run: |
+          if [ ! -f "gradlew" ]; then gradle wrapper; fi
+          chmod +x gradlew
+          ./gradlew -q projects
 
       - name: Decode Keystore
-        run: |
-          echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
-          ls -l /tmp/keystore.jks
-          chmod 600 /tmp/keystore.jks
+        run: echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
+        working-directory: ./workspace
 
-      - name: Validate Keystore
-        run: |
-          keytool -list -v -keystore /tmp/keystore.jks -storepass "${{ secrets.KEYSTOREPASSWORD }}"
-
-      - name: Build APKs
+      - name: Build APK
         working-directory: ./workspace
         run: |
-          ./gradlew assembleAndroidWearMicroRelease
-          ./gradlew assembleFullRelease
-          ./gradlew assembleWearFullRelease
+          ./gradlew assemble${{ github.event.inputs.flavor | capitalize }}Release \
+            -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
 
-      - name: Verify APK Files
-        working-directory: ./workspace
+      - name: Exe files
         run: |
-          ls ./workspace/app/build/outputs/apk || echo "No APKs found."
-          ls ./workspace/app/build/outputs/apk/androidWearMicro || echo "No Wear Micro APK found."
-          ls ./workspace/app/build/outputs/apk/fullRelease || echo "No Full Release APK found."
+          ls
 
-      - name: Upload the APK artifacts with 1-day retention
+      - name: Upload the APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
         with:
-          path: ./workspace/app/build/outputs/apk/**/*.apk
+          path: ./workspace/build/outputs/apk/**/*.apk
           name: apk-archive
           retention-days: 1
-
-      - name: Debug Environment Variables
-        run: |
-          echo "td_version=${{ env.td_version }}"
-          echo "td_commit_hash=${{ env.td_commit_hash }}"
 
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          tag: Android-${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
-          name: Android ${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
-          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash || '0000000' }}"
+          tag: Android-${{ env.td_version }}-1${{ env.td_commit_hash }}
+          name: Android ${{ env.td_version }}-1${{ env.td_commit_hash }}
+          body: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: ./workspace/app/build/outputs/apk/**/*.apk
+          artifacts: ./workspace/build/outputs/apk/**/*.apk
