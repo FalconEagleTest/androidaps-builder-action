@@ -20,10 +20,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      td_version: "3.3.0"    # Explicitly set the version here or fetch from a JSON file
-      td_commit_hash: ${{ github.sha }}    # Use GitHub's commit hash
-
     steps:
       - uses: actions/checkout@v2
 
@@ -83,8 +79,8 @@ jobs:
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          tag: Android-${{ env.td_version }}-${{ env.td_commit_hash }}
-          name: Android ${{ env.td_version }}-${{ env.td_commit_hash }}
-          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}"
+          tag: Android-${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
+          name: Android ${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
+          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash || '0000000' }}"
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: ./workspace/app/build/outputs/apk/**/*.apk
