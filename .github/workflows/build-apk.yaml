@@ -40,10 +40,20 @@ jobs:
         working-directory: ./workspace
         run: ./gradlew tasks --all
 
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
+          ls -l /tmp/keystore.jks
+          chmod 600 /tmp/keystore.jks
+
+      - name: Validate Keystore
+        run: |
+          keytool -list -v -keystore /tmp/keystore.jks -storepass "${{ secrets.KEYSTOREPASSWORD }}"
+
       - name: Build APK
         working-directory: ./workspace
         run: |
-          ./gradlew assembleFullRelease \
+          ./gradlew ${{ github.event.inputs.taskName }} \
             -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
@@ -60,3 +70,12 @@ jobs:
           path: ./workspace/app/build/outputs/apk/**/*.apk
           name: apk-archive
           retention-days: 1
+
+      - name: Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: Android-${{ env.td_version }}-${{ env.td_commit_hash }}
+          name: Android ${{ env.td_version }}-${{ env.td_commit_hash }}
+          body: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: ./workspace/app/build/outputs/apk/**/*.apk
