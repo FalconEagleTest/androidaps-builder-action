@@ -20,6 +20,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      td_version: "3.3.0"    # Explicitly set the version here or fetch from a JSON file
+      td_commit_hash: ${{ github.sha }}    # Use GitHub's commit hash
+
     steps:
       - uses: actions/checkout@v2
 
@@ -50,21 +54,21 @@ jobs:
         run: |
           keytool -list -v -keystore /tmp/keystore.jks -storepass "${{ secrets.KEYSTOREPASSWORD }}"
 
-      - name: Build APK
+      - name: Build APKs
         working-directory: ./workspace
         run: |
-          ./gradlew ${{ github.event.inputs.taskName }} \
-            -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
-            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
-            -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+          ./gradlew assembleAndroidWearMicroRelease
+          ./gradlew assembleFullRelease
+          ./gradlew assembleWearFullRelease
 
       - name: Verify APK Files
         working-directory: ./workspace
         run: |
-          find . -name "*.apk" || echo "No APKs found."
+          ls ./workspace/app/build/outputs/apk || echo "No APKs found."
+          ls ./workspace/app/build/outputs/apk/androidWearMicro || echo "No Wear Micro APK found."
+          ls ./workspace/app/build/outputs/apk/fullRelease || echo "No Full Release APK found."
 
-      - name: Upload the APK artifact with 1 day retention
+      - name: Upload the APK artifacts with 1-day retention
         uses: actions/upload-artifact@v4
         with:
           path: ./workspace/app/build/outputs/apk/**/*.apk
@@ -79,8 +83,8 @@ jobs:
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          tag: Android-${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
-          name: Android ${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
-          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash || '0000000' }}"
+          tag: Android-${{ env.td_version }}-${{ env.td_commit_hash }}
+          name: Android ${{ env.td_version }}-${{ env.td_commit_hash }}
+          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}"
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: ./workspace/app/build/outputs/apk/**/*.apk
