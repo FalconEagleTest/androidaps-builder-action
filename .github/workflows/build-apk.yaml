@@ -9,13 +9,9 @@ on:
         required: true
         default: "https://github.com/nightscout/AndroidAPS"
       jdkVersion:
-        description: "OpenJDK version to use: 8 / 11 / 17 / 21 etc."
+        description: "OpenJDK version to use: 21"
         required: false
         default: "21"
-      flavor:
-        description: "Choose the flavor to build"
-        required: true
-        default: "full"
       taskName:
         description: "build.gradle task name: assemble[Flavor]Release"
         required: false
@@ -23,15 +19,9 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Android SDK is built-in in this image
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-
-      - name: JSON to variables
-        uses: rgarcia-phi/json-to-variables@v1.1.0
-        with:
-          filename: '.github/workflows/androidaps-version.json'
-          prefix: td
 
       - name: Setup JDK
         uses: actions/setup-java@v4
@@ -46,46 +36,51 @@ jobs:
           git checkout ${{ env.td_commit_hash }}
           git show --summary
 
-      - name: Make gradlew executable
+      - name: List Gradle Tasks
         working-directory: ./workspace
-        run: |
-          if [ ! -f "gradlew" ]; then gradle wrapper; fi
-          chmod +x gradlew
-          ./gradlew -q projects
+        run: ./gradlew tasks --all
 
       - name: Decode Keystore
-        run: echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
-        working-directory: ./workspace
+        run: |
+          echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
+          ls -l /tmp/keystore.jks
+          chmod 600 /tmp/keystore.jks
 
-      - name: Capitalize Flavor
-        id: capitalize
-        run: echo "flavorName=${{ github.event.inputs.flavor | toUpperCase }}" >> $GITHUB_ENV
+      - name: Validate Keystore
+        run: |
+          keytool -list -v -keystore /tmp/keystore.jks -storepass "${{ secrets.KEYSTOREPASSWORD }}"
 
-      - name: Build APK
+      - name: Build APKs
         working-directory: ./workspace
         run: |
-          ./gradlew assemble${{ env.flavorName }}Release \
-            -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
-            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
-            -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+          ./gradlew assembleAndroidWearMicroRelease
+          ./gradlew assembleFullRelease
+          ./gradlew assembleWearFullRelease
 
-      - name: Exe files
+      - name: Verify APK Files
+        working-directory: ./workspace
         run: |
-          ls
+          ls ./workspace/app/build/outputs/apk || echo "No APKs found."
+          ls ./workspace/app/build/outputs/apk/androidWearMicro || echo "No Wear Micro APK found."
+          ls ./workspace/app/build/outputs/apk/fullRelease || echo "No Full Release APK found."
 
-      - name: Upload the APK artifact with 1 day retention
+      - name: Upload the APK artifacts with 1-day retention
         uses: actions/upload-artifact@v4
         with:
-          path: ./workspace/build/outputs/apk/**/*.apk
+          path: ./workspace/app/build/outputs/apk/**/*.apk
           name: apk-archive
           retention-days: 1
+
+      - name: Debug Environment Variables
+        run: |
+          echo "td_version=${{ env.td_version }}"
+          echo "td_commit_hash=${{ env.td_commit_hash }}"
 
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          tag: Android-${{ env.td_version }}-1${{ env.td_commit_hash }}
-          name: Android ${{ env.td_version }}-1${{ env.td_commit_hash }}
-          body: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}
+          tag: Android-${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
+          name: Android ${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
+          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash || '0000000' }}"
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: ./workspace/build/outputs/apk/**/*.apk
+          artifacts: ./workspace/app/build/outputs/apk/**/*.apk
