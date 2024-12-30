@@ -23,32 +23,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: JSON to variables
-        uses: rgarcia-phi/json-to-variables@v1.1.0
-        with:
-          filename: '.github/workflows/androidaps-version.json'
-          prefix: td
-      
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: ${{ github.event.inputs.jdkVersion }}
-
-      - name: Install Android Command-Line Tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y zip unzip
-          mkdir -p "$ANDROID_HOME/cmdline-tools/latest"
-          curl -sSL https://dl.google.com/android/repository/commandlinetools-linux-9123335_latest.zip -o cmdline-tools.zip
-          unzip cmdline-tools.zip -d "$ANDROID_HOME/cmdline-tools/latest"
-          rm cmdline-tools.zip
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
-          PATH: ${{ env.PATH }}:${{ env.ANDROID_HOME }}/cmdline-tools/latest/bin
-
-      - name: Accept SDK Licenses
-        run: yes | sdkmanager --licenses
 
       - name: Clone project
         run: |
@@ -57,25 +36,14 @@ jobs:
           git checkout ${{ env.td_commit_hash }}
           git show --summary
 
-      - name: Make gradlew executable
-        working-directory: ./workspace
-        run: |
-          if [ ! -f "gradlew" ]; then gradle wrapper; fi
-          chmod +x gradlew
-          ./gradlew -q projects
-
-      - name: Decode Keystore
-        run: echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
-        working-directory: ./workspace
-
       - name: List Gradle Tasks
         working-directory: ./workspace
-        run: ./gradlew tasks
+        run: ./gradlew tasks --all
 
       - name: Build APK
         working-directory: ./workspace
         run: |
-          ./gradlew ${{ github.event.inputs.taskName }} \
+          ./gradlew assembleFullRelease \
             -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
             -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
@@ -84,20 +52,11 @@ jobs:
       - name: Verify APK Files
         working-directory: ./workspace
         run: |
-          ls -R build/outputs/apk || echo "No APKs found."
+          find . -name "*.apk" || echo "No APKs found."
 
       - name: Upload the APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
         with:
-          path: ./workspace/build/outputs/apk/**/*.apk
+          path: ./workspace/app/build/outputs/apk/**/*.apk
           name: apk-archive
           retention-days: 1
-          
-      - name: Release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: Android-${{ env.td_version }}-1${{ env.td_commit_hash }}
-          name: Android ${{ env.td_version }}-1${{ env.td_commit_hash }}
-          body: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: ./workspace/build/outputs/apk/**/*.apk
