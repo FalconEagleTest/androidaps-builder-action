@@ -9,9 +9,9 @@ on:
         required: true
         default: "https://github.com/nightscout/AndroidAPS"
       jdkVersion:
-        description: "OpenJDK version to use: 8 / 11 / 17 etc."
+        description: "OpenJDK version to use: 8 / 11 / 17 / 21 etc."
         required: false
-        default: "17"
+        default: "21"
       taskName:
         description: "build.gradle task name: assemble[Flavor]Release"
         required: false
@@ -19,7 +19,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest # Android SDK is built-in in this image
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
 
@@ -41,37 +41,47 @@ jobs:
           cd workspace
           git checkout ${{ env.td_commit_hash }}
           git show --summary
+
       - name: Make gradlew executable
         working-directory: ./workspace
         run: |
           if [ ! -f "gradlew" ]; then gradle wrapper; fi
           chmod +x gradlew
           ./gradlew -q projects
+
       - name: Decode Keystore
         run: echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
         working-directory: ./workspace
       
+      - name: List Gradle Tasks
+        working-directory: ./workspace
+        run: ./gradlew tasks
+
       - name: Build APK
         working-directory: ./workspace
-        run: ./gradlew assembleFullRelease app:app -Pandroid.injected.signing.store.file=/tmp/keystore.jks -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
-        
-        
-      - name: Exe files
+        run: ./gradlew ${{ github.event.inputs.taskName }} \
+          -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
+          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
+          -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
+          -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+
+      - name: Verify APK Files
+        working-directory: ./workspace
         run: |
-          ls
+          ls -R build/outputs/apk || echo "No APKs found."
 
       - name: Upload the APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
         with:
-          path: ./**/*.apk
+          path: ./workspace/build/outputs/apk/**/*.apk
           name: apk-archive
           retention-days: 1
           
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-            tag: Android-${{ env.td_version }}-1${{ env.td_commit_hash }}
-            name: Android ${{ env.td_version }}-1${{ env.td_commit_hash }}
-            body: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}
-            token: ${{ secrets.GITHUB_TOKEN }}
-            artifacts: ./**/*.apk
+          tag: Android-${{ env.td_version }}-1${{ env.td_commit_hash }}
+          name: Android ${{ env.td_version }}-1${{ env.td_commit_hash }}
+          body: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: ./workspace/build/outputs/apk/**/*.apk
