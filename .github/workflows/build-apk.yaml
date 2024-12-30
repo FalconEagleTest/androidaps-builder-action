@@ -53,7 +53,6 @@ jobs:
       - name: Build APKs
         working-directory: ./workspace
         run: |
-          ./gradlew assembleAndroidWearMicroRelease
           ./gradlew assembleFullRelease
           ./gradlew assembleWearFullRelease
 
