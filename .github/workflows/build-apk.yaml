@@ -31,6 +31,19 @@ jobs:
           distribution: "temurin"
           java-version: ${{ github.event.inputs.jdkVersion }}
 
+      # Decode the Keystore from base64
+      - name: Decode Keystore
+        run: |
+          echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
+          chmod 600 /tmp/keystore.jks
+        working-directory: ./workspace
+
+      # Validate the Keystore (Optional)
+      - name: Validate Keystore
+        run: |
+          keytool -list -v -keystore /tmp/keystore.jks -storepass "${{ secrets.KEYSTOREPASSWORD }}"
+        working-directory: ./workspace
+
       # Clone the project repository
       - name: Clone Project
         run: |
@@ -38,39 +51,17 @@ jobs:
           cd workspace
           git show --summary
 
-      # Generate Keystore
-      - name: Generate Keystore
-        run: |
-          keytool -genkeypair \
-            -v \
-            -keystore /tmp/keystore.jks \
-            -storepass "${{ secrets.KEYSTOREPASSWORD }}" \
-            -keypass "${{ secrets.KEYPASSWORD }}" \
-            -alias "${{ secrets.KEYALIAS }}" \
-            -keyalg RSA \
-            -keysize 2048 \
-            -validity 10000
-        env:
-          KEYSTOREPASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
-          KEYPASSWORD: ${{ secrets.KEYPASSWORD }}
-          KEYALIAS: ${{ secrets.KEYALIAS }}
-
-      # Validate the Keystore
-      - name: Validate Keystore
-        run: |
-          keytool -list -v -keystore /tmp/keystore.jks -storepass "${{ secrets.KEYSTOREPASSWORD }}"
-
-      # Build Signed APK
-      - name: Build Signed APK
+      # Build the APK and sign it
+      - name: Build APK
         working-directory: ./workspace
         run: |
           ./gradlew ${{ github.event.inputs.taskName }} \
             -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
             -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
-            -Pandroid.injected.signing.key.alias=${{ secrets.KEYALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.KEYPASSWORD }}
+            -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
 
-      # Verify APK Files
+      # Verify the APK Files
       - name: Verify APK Files
         working-directory: ./workspace
         run: |
@@ -85,8 +76,6 @@ jobs:
           name: apk-archive
           retention-days: 1
 
-      # Debug Environment Variables (Optional)
-      - name: Debug Environment Variables
-        run: |
-          echo "td_version=${{ env.td_version }}"
-          echo "td_commit_hash=${{ env.td_commit_hash }}"
+      # Cleanup the keystore after use (optional)
+      - name: Cleanup Keystore
+        run: rm -f /tmp/keystore.jks
