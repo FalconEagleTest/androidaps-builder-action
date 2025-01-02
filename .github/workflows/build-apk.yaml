@@ -36,25 +36,19 @@ jobs:
           git checkout ${{ env.td_commit_hash }}
           git show --summary
 
-      - name: List Gradle Tasks
-        working-directory: ./workspace
-        run: ./gradlew tasks --all
-
       - name: Decode Keystore
         run: |
           echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
-          ls -l /tmp/keystore.jks
           chmod 600 /tmp/keystore.jks
 
-      - name: Validate Keystore
-        run: |
-          keytool -list -v -keystore /tmp/keystore.jks -storepass "${{ secrets.KEYSTOREPASSWORD }}"
-
-      - name: Build APKs
+      - name: Build Signed APK
         working-directory: ./workspace
         run: |
-          ./gradlew assembleFullRelease
-          
+          ./gradlew ${{ github.event.inputs.taskName }} \
+            -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
+            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
+            -Pandroid.injected.signing.key.alias=${{ secrets.KEYALIAS }} \
+            -Pandroid.injected.signing.key.password=${{ secrets.KEYPASSWORD }}
 
       - name: Verify APK Files
         working-directory: ./workspace
