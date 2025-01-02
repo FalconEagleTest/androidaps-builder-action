@@ -21,26 +21,46 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Checkout the repository
       - uses: actions/checkout@v2
 
+      # Setup JDK
       - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: ${{ github.event.inputs.jdkVersion }}
 
-      - name: Clone project
+      # Clone the project repository
+      - name: Clone Project
         run: |
           git clone --recurse-submodules --depth=1 ${{ github.event.inputs.repository }} workspace
           cd workspace
-          git checkout ${{ env.td_commit_hash }}
           git show --summary
 
-      - name: Decode Keystore
+      # Generate Keystore
+      - name: Generate Keystore
         run: |
-          echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
-          chmod 600 /tmp/keystore.jks
+          keytool -genkeypair \
+            -v \
+            -keystore /tmp/keystore.jks \
+            -storepass "${{ secrets.KEYSTOREPASSWORD }}" \
+            -keypass "${{ secrets.KEYPASSWORD }}" \
+            -alias "${{ secrets.KEYALIAS }}" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000
+        env:
+          KEYSTOREPASSWORD: ${{ secrets.KEYSTOREPASSWORD }}
+          KEYPASSWORD: ${{ secrets.KEYPASSWORD }}
+          KEYALIAS: ${{ secrets.KEYALIAS }}
 
+      # Validate the Keystore
+      - name: Validate Keystore
+        run: |
+          keytool -list -v -keystore /tmp/keystore.jks -storepass "${{ secrets.KEYSTOREPASSWORD }}"
+
+      # Build Signed APK
       - name: Build Signed APK
         working-directory: ./workspace
         run: |
@@ -50,30 +70,23 @@ jobs:
             -Pandroid.injected.signing.key.alias=${{ secrets.KEYALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.KEYPASSWORD }}
 
+      # Verify APK Files
       - name: Verify APK Files
         working-directory: ./workspace
         run: |
           ls ./workspace/app/build/outputs/apk || echo "No APKs found."
-          ls ./workspace/app/build/outputs/apk/androidWearMicro || echo "No Wear Micro APK found."
           ls ./workspace/app/build/outputs/apk/fullRelease || echo "No Full Release APK found."
 
-      - name: Upload the APK artifacts with 1-day retention
+      # Upload APK artifacts
+      - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
           path: ./workspace/app/build/outputs/apk/**/*.apk
           name: apk-archive
           retention-days: 1
 
+      # Debug Environment Variables (Optional)
       - name: Debug Environment Variables
         run: |
           echo "td_version=${{ env.td_version }}"
           echo "td_commit_hash=${{ env.td_commit_hash }}"
-
-      - name: Release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: Android-${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
-          name: Android ${{ env.td_version || 'unknown' }}-${{ env.td_commit_hash || '0000000' }}
-          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash || '0000000' }}"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: ./workspace/app/build/outputs/apk/**/*.apk
