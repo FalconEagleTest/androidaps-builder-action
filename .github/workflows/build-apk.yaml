@@ -21,61 +21,70 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # Checkout the repository
       - uses: actions/checkout@v2
 
-      # Setup JDK
-      - name: Setup JDK
+      - name: JSON to variables
+        uses: rgarcia-phi/json-to-variables@v1.1.0
+        with:
+          filename: '.github/workflows/androidaps-version.json'
+          prefix: td
+
+      # Set up JDK 21 (since Android Studio "Ladybug" requires it)
+      - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: ${{ github.event.inputs.jdkVersion }}
+          java-version: 21
 
-      # Decode the Keystore from base64
-      - name: Decode Keystore
-        run: |
-          echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
-          chmod 600 /tmp/keystore.jks
-        working-directory: ./workspace
-
-      # Validate the Keystore (Optional)
-      - name: Validate Keystore
-        run: |
-          keytool -list -v -keystore /tmp/keystore.jks -storepass "${{ secrets.KEYSTOREPASSWORD }}"
-        working-directory: ./workspace
-
-      # Clone the project repository
-      - name: Clone Project
+      # Clone project repository
+      - name: Clone project
         run: |
           git clone --recurse-submodules --depth=1 ${{ github.event.inputs.repository }} workspace
           cd workspace
+          git checkout ${{ env.td_commit_hash }}
           git show --summary
 
-      # Build the APK and sign it
+      # Make gradlew executable
+      - name: Make gradlew executable
+        working-directory: ./workspace
+        run: |
+          if [ ! -f "gradlew" ]; then gradle wrapper; fi
+          chmod +x gradlew
+          ./gradlew -q projects
+
+      # Decode Keystore
+      - name: Decode Keystore
+        run: echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
+        working-directory: ./workspace
+
+      # Build APK (signed)
       - name: Build APK
         working-directory: ./workspace
-        run: |
-          ./gradlew ${{ github.event.inputs.taskName }} \
-            -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
-            -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
-            -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+        run: ./gradlew ${{ github.event.inputs.taskName }} \
+          -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
+          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
+          -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
+          -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
 
-      # Verify the APK Files
-      - name: Verify APK Files
-        working-directory: ./workspace
+      # Verify APK Files
+      - name: Exe files
         run: |
           ls ./workspace/app/build/outputs/apk || echo "No APKs found."
-          ls ./workspace/app/build/outputs/apk/fullRelease || echo "No Full Release APK found."
 
       # Upload APK artifacts
-      - name: Upload APK Artifacts
+      - name: Upload the APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
         with:
           path: ./workspace/app/build/outputs/apk/**/*.apk
           name: apk-archive
           retention-days: 1
 
-      # Cleanup the keystore after use (optional)
-      - name: Cleanup Keystore
-        run: rm -f /tmp/keystore.jks
+      # Create GitHub Release
+      - name: Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: Android-${{ env.td_version }}-${{ env.td_commit_hash }}
+          name: Android ${{ env.td_version }}-${{ env.td_commit_hash }}
+          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          artifacts: ./workspace/app/build/outputs/apk/**/*.apk
