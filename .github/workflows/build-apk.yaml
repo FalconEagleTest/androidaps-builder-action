@@ -39,7 +39,7 @@ jobs:
       # Clone project repository
       - name: Clone project
         run: |
-          git clone --recurse-submodules --depth=1 ${{ github.event.inputs.repository }} workspace
+          git clone --recurse-submodules ${{ github.event.inputs.repository }} workspace
           cd workspace
           git checkout ${{ env.td_commit_hash }}
           git show --summary
