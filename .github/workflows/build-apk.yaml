@@ -9,9 +9,9 @@ on:
         required: true
         default: "https://github.com/nightscout/AndroidAPS"
       jdkVersion:
-        description: "OpenJDK version to use: 21"
+        description: "OpenJDK version to use: 8 / 11 / 17 etc."
         required: false
-        default: "21"
+        default: "17"
       taskName:
         description: "build.gradle task name: assemble[Flavor]Release"
         required: false
