@@ -29,12 +29,12 @@ jobs:
           filename: '.github/workflows/androidaps-version.json'
           prefix: td
 
-      # Set up JDK 21 (since Android Studio "Ladybug" requires it)
-      - name: Setup JDK 21
+      # Set up JDK  (since Android Studio "Ladybug" requires it)
+      - name: Setup JDK ${{ github.event.inputs.jdkVersion }}
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
-          java-version: 21
+          java-version: ${{ github.event.inputs.jdkVersion }}
 
       # Clone project repository
       - name: Clone project
