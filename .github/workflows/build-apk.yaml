@@ -99,7 +99,7 @@ jobs:
         uses: ncipollo/release-action@v1
         with:
           tag: Android-${{ env.td_version }}-${{ env.td_commit_hash }}
-          name: Android-${{ env.td_version }}-${{ env.td_commit_hash }} - ${{ env.time }}
+          name: "Android-${{ env.td_version }}-${{ env.td_commit_hash }} - ${{ env.time }}"
           body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash || 'main' }}"
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: |
