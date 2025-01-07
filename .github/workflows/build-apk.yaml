@@ -1,4 +1,4 @@
-name: Build Android APKs
+name: Build Android APK
 run-name: ${{ github.event.inputs.repository }}:${{ github.event.inputs.taskName }}
 
 on:
@@ -12,102 +12,75 @@ on:
         description: "OpenJDK version to use: 8 / 11 / 17 etc."
         required: false
         default: "21"
+      taskName:
+        description: "build.gradle task name: assemble[Flavor]Release"
+        required: false
+        default: "assembleFullRelease"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
+      - name: JSON to variables
+        uses: rgarcia-phi/json-to-variables@v1.1.0
+        with:
+          filename: '.github/workflows/androidaps-version.json'
+          prefix: td
+
+      # Set up JDK  (since Android Studio "Ladybug" requires it)
       - name: Setup JDK ${{ github.event.inputs.jdkVersion }}
         uses: actions/setup-java@v4
         with:
           distribution: "temurin"
           java-version: ${{ github.event.inputs.jdkVersion }}
 
-      - name: Clone Project
+      # Clone project repository
+      - name: Clone project
         run: |
           git clone --recurse-submodules ${{ github.event.inputs.repository }} workspace
           cd workspace
-          git checkout ${{ env.td_commit_hash || 'main' }}
+          git checkout ${{ env.td_commit_hash }}
           git show --summary
 
-      - name: Initialize Submodules
-        working-directory: ./workspace
-        run: git submodule update --init --recursive
-
-      - name: Verify Directory Structure
-        run: |
-          echo "Listing directory structure:"
-          ls -R ./workspace
-        working-directory: .
-
-      - name: Make gradlew Executable
+      # Make gradlew executable
+      - name: Make gradlew executable
         working-directory: ./workspace
         run: |
           if [ ! -f "gradlew" ]; then gradle wrapper; fi
           chmod +x gradlew
           ./gradlew -q projects
 
+      # Decode Keystore
       - name: Decode Keystore
         run: echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
         working-directory: ./workspace
 
-      # Build Main APK
-      - name: Build Main APK
+      # Build APK (signed)
+      - name: Build APK
         working-directory: ./workspace
-        run: ./gradlew :app:assembleFullRelease \
-          -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
-          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
-          -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
-          -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
-
-      # Build Wear APK
-      - name: Build Wear APK
-        working-directory: ./workspace
-        run: ./gradlew :wear:assembleFullRelease \
-          -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
-          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
-          -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
-          -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
-
-      - name: Generate Timestamp
-        id: timestamp
-        run: echo "time=$(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
-
+        run: ./gradlew ${{ github.event.inputs.taskName }}  -Pandroid.injected.signing.store.file=/tmp/keystore.jks -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }}  -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }}  -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+      
       # Verify APK Files
-      - name: Verify APK Files
+      - name: Exe files
         run: |
-          echo "Checking Main APKs:"
-          ls ./workspace/app/build/outputs/apk || echo "No Main APKs found."
-          echo "Checking Wear APKs:"
-          ls ./workspace/wear/build/outputs/apk || echo "No Wear APKs found."
+          ls ./workspace/app/build/outputs/apk || echo "No APKs found."
 
-      # Upload Main APK Artifact
-      - name: Upload Main APK
+      # Upload APK artifacts
+      - name: Upload the APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
         with:
           path: ./workspace/app/build/outputs/apk/**/*.apk
-          name: main-apk-archive
-          retention-days: 1
-
-      # Upload Wear APK Artifact
-      - name: Upload Wear APK
-        uses: actions/upload-artifact@v4
-        with:
-          path: ./workspace/wear/build/outputs/apk/**/*.apk
-          name: wear-apk-archive
+          name: apk-archive
           retention-days: 1
 
       # Create GitHub Release
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          tag: Android-${{ env.td_version }}-${{ env.td_commit_hash || 'main' }}
-          name: "Android ${{ env.td_version }}-${{ env.td_commit_hash || 'main' }} - ${{ env.time }}"
-          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash || 'main' }}"
+          tag: Android-${{ env.td_version }}-${{ env.td_commit_hash }}
+          name: Android ${{ env.td_version }}-${{ env.td_commit_hash }}
+          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}"
           token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: |
-            ./workspace/app/build/outputs/apk/**/*.apk
-            ./workspace/wear/build/outputs/apk/**/*.apk
+          artifacts: ./workspace/app/build/outputs/apk/**/*.apk
