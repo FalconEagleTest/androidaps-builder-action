@@ -19,7 +19,11 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v2
-
+      - name: JSON to variables
+        uses: rgarcia-phi/json-to-variables@v1.1.0
+        with:
+          filename: '.github/workflows/androidaps-version.json'
+          prefix: td
       - name: Setup JDK ${{ github.event.inputs.jdkVersion }}
         uses: actions/setup-java@v4
         with:
