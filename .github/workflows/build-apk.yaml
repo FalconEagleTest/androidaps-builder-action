@@ -43,7 +43,7 @@ jobs:
           cd workspace
           git checkout ${{ env.td_commit_hash }}
           git show --summary
-
+      
       # Make gradlew executable
       - name: Make gradlew executable
         working-directory: ./workspace
@@ -51,36 +51,12 @@ jobs:
           if [ ! -f "gradlew" ]; then gradle wrapper; fi
           chmod +x gradlew
           ./gradlew -q projects
-
-      # Decode Keystore
-      - name: Decode Keystore
-        run: echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
-        working-directory: ./workspace
-
-      # Build APK (signed)
-      - name: Build APK
-        working-directory: ./workspace
-        run: ./gradlew ${{ github.event.inputs.taskName }}  -Pandroid.injected.signing.store.file=/tmp/keystore.jks -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }}  -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }}  -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
-      
-      # Verify APK Files
-      - name: Exe files
+      # List Directory Structure and Projects
+      - name: List Directory Structure and Projects
         run: |
-          ls ./workspace/app/build/outputs/apk || echo "No APKs found."
-
-      # Upload APK artifacts
-      - name: Upload the APK artifact with 1 day retention
-        uses: actions/upload-artifact@v4
-        with:
-          path: ./workspace/app/build/outputs/apk/**/*.apk
-          name: apk-archive
-          retention-days: 1
-
-      # Create GitHub Release
-      - name: Release
-        uses: ncipollo/release-action@v1
-        with:
-          tag: Android-${{ env.td_version }}-${{ env.td_commit_hash }}
-          name: Android ${{ env.td_version }}-${{ env.td_commit_hash }}
-          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}"
-          token: ${{ secrets.GITHUB_TOKEN }}
-          artifacts: ./workspace/app/build/outputs/apk/**/*.apk
+          echo "Directory structure:"
+          ls -R ./workspace
+          echo "Gradle projects:"
+          ./gradlew projects
+        working-directory: ./workspace
+      
