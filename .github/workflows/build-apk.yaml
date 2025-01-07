@@ -17,13 +17,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-
-      - name: JSON to variables
-        uses: rgarcia-phi/json-to-variables@v1.1.0
-        with:
-          filename: '.github/workflows/androidaps-version.json'
-          prefix: td
+      - name: Checkout Repository
+        uses: actions/checkout@v2
 
       - name: Setup JDK ${{ github.event.inputs.jdkVersion }}
         uses: actions/setup-java@v4
@@ -31,26 +26,24 @@ jobs:
           distribution: "temurin"
           java-version: ${{ github.event.inputs.jdkVersion }}
 
-      - name: Clone project
+      - name: Clone Project
         run: |
           git clone --recurse-submodules ${{ github.event.inputs.repository }} workspace
           cd workspace
-          git checkout ${{ env.td_commit_hash }}
+          git checkout ${{ env.td_commit_hash || 'main' }}
           git show --summary
 
-      - name: Initialize submodules
-        run: git submodule update --init --recursive
+      - name: Initialize Submodules
         working-directory: ./workspace
+        run: git submodule update --init --recursive
 
-      - name: List Directory Structure and Modules
+      - name: Verify Directory Structure
         run: |
           echo "Listing directory structure:"
           ls -R ./workspace
-          echo "Available Gradle projects:"
-          ./gradlew projects
-        working-directory: ./workspace
+        working-directory: .
 
-      - name: Make gradlew executable
+      - name: Make gradlew Executable
         working-directory: ./workspace
         run: |
           if [ ! -f "gradlew" ]; then gradle wrapper; fi
@@ -61,7 +54,7 @@ jobs:
         run: echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
         working-directory: ./workspace
 
-      # Build APK for main app
+      # Build Main APK
       - name: Build Main APK
         working-directory: ./workspace
         run: ./gradlew :app:assembleFullRelease \
@@ -70,7 +63,7 @@ jobs:
           -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
           -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
 
-      # Build APK for wear module
+      # Build Wear APK
       - name: Build Wear APK
         working-directory: ./workspace
         run: ./gradlew :wear:assembleFullRelease \
@@ -79,7 +72,6 @@ jobs:
           -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
           -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
 
-      # Generate timestamp for release name
       - name: Generate Timestamp
         id: timestamp
         run: echo "time=$(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_ENV
@@ -87,21 +79,21 @@ jobs:
       # Verify APK Files
       - name: Verify APK Files
         run: |
-          echo "Checking main APKs:"
+          echo "Checking Main APKs:"
           ls ./workspace/app/build/outputs/apk || echo "No Main APKs found."
-          echo "Checking wear APKs:"
+          echo "Checking Wear APKs:"
           ls ./workspace/wear/build/outputs/apk || echo "No Wear APKs found."
 
-      # Upload Main APK artifacts
-      - name: Upload Main APK artifact with 1 day retention
+      # Upload Main APK Artifact
+      - name: Upload Main APK
         uses: actions/upload-artifact@v4
         with:
           path: ./workspace/app/build/outputs/apk/**/*.apk
           name: main-apk-archive
           retention-days: 1
 
-      # Upload Wear APK artifacts
-      - name: Upload Wear APK artifact with 1 day retention
+      # Upload Wear APK Artifact
+      - name: Upload Wear APK
         uses: actions/upload-artifact@v4
         with:
           path: ./workspace/wear/build/outputs/apk/**/*.apk
@@ -112,9 +104,9 @@ jobs:
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          tag: Android-${{ env.td_version }}-${{ env.td_commit_hash }}
-          name: "Android ${{ env.td_version }}-${{ env.td_commit_hash }} - ${{ env.time }}"
-          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash }}"
+          tag: Android-${{ env.td_version }}-${{ env.td_commit_hash || 'main' }}
+          name: "Android ${{ env.td_version }}-${{ env.td_commit_hash || 'main' }} - ${{ env.time }}"
+          body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash || 'main' }}"
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: |
             ./workspace/app/build/outputs/apk/**/*.apk
