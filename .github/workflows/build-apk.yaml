@@ -38,6 +38,18 @@ jobs:
           git checkout ${{ env.td_commit_hash }}
           git show --summary
 
+      - name: Initialize submodules
+        run: git submodule update --init --recursive
+        working-directory: ./workspace
+
+      - name: List Directory Structure and Modules
+        run: |
+          echo "Listing directory structure:"
+          ls -R ./workspace
+          echo "Available Gradle projects:"
+          ./gradlew projects
+        working-directory: ./workspace
+
       - name: Make gradlew executable
         working-directory: ./workspace
         run: |
@@ -49,16 +61,6 @@ jobs:
         run: echo "${{ secrets.SIGNINGKEYBASE64 }}" | base64 --decode > /tmp/keystore.jks
         working-directory: ./workspace
 
-      
-
-      # Build APK for wear module
-      - name: Build Wear APK
-        working-directory: ./workspace
-        run: ./gradlew :AndroidAPS.wear:assembleFullRelease \
-          -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
-          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
-          -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
-          -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
       # Build APK for main app
       - name: Build Main APK
         working-directory: ./workspace
@@ -67,6 +69,16 @@ jobs:
           -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
           -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
           -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+
+      # Build APK for wear module
+      - name: Build Wear APK
+        working-directory: ./workspace
+        run: ./gradlew :wear:assembleFullRelease \
+          -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
+          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
+          -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
+          -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+
       # Generate timestamp for release name
       - name: Generate Timestamp
         id: timestamp
@@ -75,8 +87,10 @@ jobs:
       # Verify APK Files
       - name: Verify APK Files
         run: |
+          echo "Checking main APKs:"
           ls ./workspace/app/build/outputs/apk || echo "No Main APKs found."
-          ls ./workspace/AndroidAPS/wear/build/outputs/apk || echo "No Wear APKs found."
+          echo "Checking wear APKs:"
+          ls ./workspace/wear/build/outputs/apk || echo "No Wear APKs found."
 
       # Upload Main APK artifacts
       - name: Upload Main APK artifact with 1 day retention
@@ -90,7 +104,7 @@ jobs:
       - name: Upload Wear APK artifact with 1 day retention
         uses: actions/upload-artifact@v4
         with:
-          path: ./workspace/AndroidAPS/wear/build/outputs/apk/**/*.apk
+          path: ./workspace/wear/build/outputs/apk/**/*.apk
           name: wear-apk-archive
           retention-days: 1
 
@@ -104,4 +118,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           artifacts: |
             ./workspace/app/build/outputs/apk/**/*.apk
-            ./workspace/AndroidAPS/wear/build/outputs/apk/**/*.apk
+            ./workspace/wear/build/outputs/apk/**/*.apk
