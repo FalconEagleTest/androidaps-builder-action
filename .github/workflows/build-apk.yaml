@@ -93,12 +93,23 @@ jobs:
           path: ./workspace/wear/build/outputs/apk/**/*.apk
           name: wear-apk-archive
           retention-days: 1
+      - name: Sanitize tag
+        id: sanitize_tag
+        run: |
+          sanitized_version="${{ env.td_version }}"
+          sanitized_commit_hash="${{ env.td_commit_hash }}"
+      
+          # Replace spaces and non-alphanumeric characters with a safe character (e.g., dash)
+          sanitized_version=$(echo "$sanitized_version" | sed 's/[^a-zA-Z0-9]/-/g')
+          sanitized_commit_hash=$(echo "$sanitized_commit_hash" | sed 's/[^a-zA-Z0-9]/-/g')
+      
+          echo "sanitized_tag=Android-${sanitized_version}-${sanitized_commit_hash}" >> $GITHUB_ENV
 
       # Create GitHub Release
       - name: Release
         uses: ncipollo/release-action@v1
         with:
-          tag: "Android-${{ env.td_version | replace(' ', '-') }}-${{ env.td_commit_hash | replace(' ', '-') }}"
+          tag: "${{ env.sanitized_tag }}"
           name: "Android-${{ env.td_version }}-${{ env.td_commit_hash }} - ${{ env.time }}"
           body: "View source code at: https://github.com/nightscout/AndroidAPS/tree/${{ env.td_commit_hash || 'main' }}"
           token: ${{ secrets.GITHUB_TOKEN }}
