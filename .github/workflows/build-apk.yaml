@@ -55,7 +55,7 @@ jobs:
       - name: List Directory Structure and Projects
         run: |
           echo "Directory structure:"
-          ls -R ./workspace
+          ls -R
           echo "Gradle projects:"
           ./gradlew projects
         working-directory: ./workspace
