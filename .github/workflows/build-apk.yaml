@@ -57,20 +57,12 @@ jobs:
       # Build Wear APK
       - name: Build Wear APK
         working-directory: ./workspace
-        run: ./gradlew :wear:assembleFullRelease \
-          -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
-          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
-          -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
-          -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+        run: ./gradlew :wear:assembleFullRelease -Pandroid.injected.signing.store.file=/tmp/keystore.jks -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
           
       # Build Main APK
       - name: Build Main APK
         working-directory: ./workspace
-        run: ./gradlew :app:assembleFullRelease \
-          -Pandroid.injected.signing.store.file=/tmp/keystore.jks \
-          -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} \
-          -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
-          -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
+        run: ./gradlew :app:assembleFullRelease -Pandroid.injected.signing.store.file=/tmp/keystore.jks -Pandroid.injected.signing.store.password=${{ secrets.KEYSTOREPASSWORD }} -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} -Pandroid.injected.signing.key.password=${{ secrets.KEYSTOREPASSWORD }}
 
       
 
